@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "homepage": "https://<TEN-GITHUB-CUA-BAN>.github.io/<TEN-REPO-CUA-BAN>",
+  "homepage": "https://ToanNguyenDEV97.github.io/bao_cao_khao_sat",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
