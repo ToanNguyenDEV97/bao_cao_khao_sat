@@ -1,4 +1,5 @@
 
+
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Recommendation, RecommendationCategory, ComputerConfiguration, GeneralInfo, School } from './types';
 import { INITIAL_RECOMMENDATIONS, INITIAL_CONFIGURATIONS } from './constants';

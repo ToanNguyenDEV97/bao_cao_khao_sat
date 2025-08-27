@@ -1,4 +1,5 @@
 
+
 import React from 'react';
 import { Trash2, Sparkles } from 'lucide-react';
 import { Recommendation, RecommendationCategory } from '../types';
