@@ -7,4 +7,9 @@ export default defineConfig({
   // Ví dụ: nếu URL repo là https://github.com/user/my-app, thì base là '/my-app/'
   base: '/bao_cao_khao_sat/',
   plugins: [react()],
+  // Thêm mục này để tránh lỗi "process is not defined" trên trình duyệt.
+  // Điều này cần thiết cho các thư viện sử dụng process.env, như Gemini API SDK.
+  define: {
+    'process.env': {}
+  }
 })
