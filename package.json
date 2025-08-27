@@ -9,7 +9,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "predeploy": "npm run build",
-    "deploy": "gh-pages -d dist"
+    "deploy": "gh-pages -d dist -r https://github.com/ToanNguyenDEV97/bao_cao_khao_sat.git"
   },
   "dependencies": {
     "html2canvas": "^1.4.1",

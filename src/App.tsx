@@ -228,7 +228,7 @@ const App: React.FC = () => {
           config.id === configId ? { ...config, notes: config.notes.filter((_, index) => index !== noteIndex) } : config
       ));
   };
-
+  
   const handleGenerateAiRecommendations = async () => {
     setIsGeneratingAiRecs(true);
     try {
@@ -293,7 +293,7 @@ const App: React.FC = () => {
         setIsGeneratingAiRecs(false);
     }
   };
-  
+
   const handlePrint = () => window.print();
 
   const handleDownloadPdf = async () => {

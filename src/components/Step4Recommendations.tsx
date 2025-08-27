@@ -55,7 +55,7 @@ const Step4Recommendations: React.FC<Step4RecommendationsProps> = ({
             </button>
         </div>
         <div className="space-y-4 min-h-[150px]">
-            {Object.keys(groupedRecommendations).length > 0 ? 
+            {Object.values(groupedRecommendations).some(arr => arr.length > 0) ? 
                 Object.entries(groupedRecommendations).map(([category, recs]) => {
                     const categoryInfo = RECOMMENDATION_CATEGORIES.find(c => c.value === category);
                     if (!recs || recs.length === 0) return null;
