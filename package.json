@@ -12,6 +12,7 @@
     "deploy": "gh-pages -d dist -r https://github.com/ToanNguyenDEV97/bao_cao_khao_sat.git"
   },
   "dependencies": {
+    "@google/genai": "^0.20.0",
     "html2canvas": "^1.4.1",
     "jspdf": "^2.5.1",
     "lucide-react": "^0.542.0",

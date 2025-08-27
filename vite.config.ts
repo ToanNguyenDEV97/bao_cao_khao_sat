@@ -12,11 +12,4 @@ export default defineConfig({
   define: {
     'process.env': {}
   },
-  build: {
-    rollupOptions: {
-      // Mark @google/genai as an external module.
-      // This tells Rollup not to bundle it, as it will be provided by the importmap in index.html at runtime.
-      external: ['@google/genai'],
-    },
-  },
 })

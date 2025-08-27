@@ -233,30 +233,24 @@ const App: React.FC = () => {
     setIsGeneratingPdf(true);
     const reportElement = document.getElementById('report-content');
     if (!reportElement) {
-        alert("Không tìm thấy nội dung báo cáo để xuất PDF.");
+        alert("PDF generation library not loaded.");
         setIsGeneratingPdf(false);
         return;
     }
 
     try {
-        const canvas = await html2canvas(reportElement, { scale: 2, useCORS: true });
-        const imgData = canvas.toDataURL('image/png');
-
         const pdf = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
-        
+
         const MARGIN = 15;
         const PAGE_WIDTH = pdf.internal.pageSize.getWidth();
         const PAGE_HEIGHT = pdf.internal.pageSize.getHeight();
         const CONTENT_WIDTH = PAGE_WIDTH - MARGIN * 2;
         const CONTENT_HEIGHT = PAGE_HEIGHT - MARGIN * 2;
-
-        const imgProps = pdf.getImageProperties(imgData);
-        const totalPdfHeight = (imgProps.height * CONTENT_WIDTH) / imgProps.width;
-
-        let heightLeft = totalPdfHeight;
-        let position = 0;
-        let pageNumber = 1;
         
+        let y = MARGIN;
+        let pageNumber = 1;
+        const PADDING_BETWEEN_ELEMENTS = 4;
+
         const addPageFooter = (pageNum: number) => {
             if (!pdfOptions.includePageNumbers && !pdfOptions.customFooterText) return;
         
@@ -264,9 +258,9 @@ const App: React.FC = () => {
             const originalTextColor = pdf.getTextColor();
         
             pdf.setFontSize(9);
-            pdf.setTextColor(128, 128, 128);
+            pdf.setTextColor(128, 128, 128); // Gray color
         
-            const footerY = PAGE_HEIGHT - 10;
+            const footerY = PAGE_HEIGHT - 10; // Position 10mm from bottom
             const footerTextParts: string[] = [];
         
             if (pdfOptions.customFooterText) {
@@ -283,18 +277,67 @@ const App: React.FC = () => {
             pdf.setTextColor(originalTextColor);
         };
 
-        pdf.addImage(imgData, 'PNG', MARGIN, position + MARGIN, CONTENT_WIDTH, totalPdfHeight);
-        addPageFooter(pageNumber);
-        heightLeft -= CONTENT_HEIGHT;
+        const elements = Array.from(reportElement.children) as HTMLElement[];
 
-        while (heightLeft > 0) {
-            position -= CONTENT_HEIGHT;
-            pageNumber++;
-            pdf.addPage();
-            pdf.addImage(imgData, 'PNG', MARGIN, position + MARGIN, CONTENT_WIDTH, totalPdfHeight);
-            addPageFooter(pageNumber);
-            heightLeft -= CONTENT_HEIGHT;
+        for (const element of elements) {
+            if (element.tagName === 'FOOTER' && y > MARGIN) {
+                addPageFooter(pageNumber);
+                pdf.addPage();
+                pageNumber++;
+                y = MARGIN;
+            }
+
+            const canvas = await html2canvas(element, { scale: 2, useCORS: true });
+            const imgProps = pdf.getImageProperties(canvas);
+            const elementHeight = (imgProps.height * CONTENT_WIDTH) / imgProps.width;
+            
+            if (y + elementHeight > PAGE_HEIGHT - MARGIN && y > MARGIN) {
+                addPageFooter(pageNumber);
+                pdf.addPage();
+                pageNumber++;
+                y = MARGIN;
+            }
+            
+            if (elementHeight > CONTENT_HEIGHT) {
+                let heightLeft = elementHeight;
+                let imagePositionInElement = 0;
+
+                while (heightLeft > 0) {
+                    const spaceOnPage = PAGE_HEIGHT - y - MARGIN;
+                    const chunkHeight = Math.min(heightLeft, spaceOnPage);
+                    
+                    const tempCanvas = document.createElement('canvas');
+                    const pixelRatio = canvas.width / CONTENT_WIDTH;
+                    const sourceY = imagePositionInElement * pixelRatio;
+                    const sourceHeight = chunkHeight * pixelRatio;
+                    tempCanvas.width = canvas.width;
+                    tempCanvas.height = sourceHeight;
+                    const ctx = tempCanvas.getContext('2d');
+                    if (ctx) {
+                        ctx.drawImage(canvas, 0, sourceY, canvas.width, sourceHeight, 0, 0, canvas.width, sourceHeight);
+                        pdf.addImage(tempCanvas, 'PNG', MARGIN, y, CONTENT_WIDTH, chunkHeight);
+                    }
+
+                    heightLeft -= chunkHeight;
+                    imagePositionInElement += chunkHeight;
+                    y += chunkHeight;
+                    
+                    if (heightLeft > 0) {
+                        addPageFooter(pageNumber);
+                        pdf.addPage();
+                        pageNumber++;
+                        y = MARGIN;
+                    }
+                }
+            } else {
+                pdf.addImage(canvas, 'PNG', MARGIN, y, CONTENT_WIDTH, elementHeight);
+                y += elementHeight;
+            }
+
+            y += PADDING_BETWEEN_ELEMENTS;
         }
+        
+        addPageFooter(pageNumber);
 
         pdf.save('BaoCaoKhaoSat.pdf');
     } catch (error) {
@@ -462,6 +505,23 @@ const App: React.FC = () => {
             }
         }
         
+        // 4. Transform Footer (Flex -> Table)
+        const footerEl = clonedReport.querySelector('footer');
+        if(footerEl) {
+            const signatureDivs = footerEl.querySelectorAll('div > div');
+             if (signatureDivs.length === 2) {
+                footerEl.style.pageBreakBefore = 'always';
+                footerEl.innerHTML = `
+                <table style="width: 100%; border: none; text-align: center;">
+                    <tr>
+                        <td style="border: none; width: 50%;">${signatureDivs[0].innerHTML}</td>
+                        <td style="border: none; width: 50%;">${signatureDivs[1].innerHTML}</td>
+                    </tr>
+                </table>`;
+            }
+        }
+
+
         const header = `
             <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
             <head><meta charset='utf-8'><title>Báo Cáo Khảo Sát Phòng Máy</title><style>${wordStyles}</style></head>
