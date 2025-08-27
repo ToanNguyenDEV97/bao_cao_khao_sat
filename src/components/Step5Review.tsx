@@ -1,4 +1,5 @@
 
+
 import React from 'react';
 import { Printer, Download, FileText } from 'lucide-react';
 import { GeneralInfo, ComputerConfiguration, Recommendation, RecommendationCategory, School } from '../types';
@@ -253,19 +254,6 @@ const Step5Review: React.FC<Step5ReviewProps> = ({
                             })}
                         </div>
                     </section>
-                    
-                    <footer className="mt-12 pt-8 break-before-page">
-                        <div className="flex justify-around text-center">
-                            <div>
-                                <p className="font-bold">Người khảo sát</p>
-                                <p className="mt-20">(Ký, ghi rõ họ tên)</p>
-                            </div>
-                            <div>
-                                <p className="font-bold">Đại diện đơn vị</p>
-                                <p className="mt-20">(Ký, ghi rõ họ tên)</p>
-                            </div>
-                        </div>
-                    </footer>
                 </main>
             </div>
         </div>

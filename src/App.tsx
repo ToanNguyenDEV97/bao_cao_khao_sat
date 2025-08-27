@@ -300,23 +300,41 @@ const App: React.FC = () => {
     setIsGeneratingPdf(true);
     const reportElement = document.getElementById('report-content');
     if (!reportElement) {
-        alert("PDF generation library not loaded.");
+        console.error("Report element not found for PDF generation.");
         setIsGeneratingPdf(false);
         return;
     }
 
     try {
-        const pdf = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
+        // Render the entire report content to a single canvas
+        const canvas = await html2canvas(reportElement, {
+            scale: 2, // Higher scale for better quality
+            useCORS: true,
+            windowHeight: reportElement.scrollHeight, // Ensure it captures the full height
+        });
+
+        const imgData = canvas.toDataURL('image/png');
+        
+        // Initialize jsPDF
+        const pdf = new jsPDF({
+            orientation: 'portrait',
+            unit: 'mm',
+            format: 'a4',
+        });
 
         const MARGIN = 15;
         const PAGE_WIDTH = pdf.internal.pageSize.getWidth();
         const PAGE_HEIGHT = pdf.internal.pageSize.getHeight();
-        const CONTENT_WIDTH = PAGE_WIDTH - MARGIN * 2;
-        const CONTENT_HEIGHT = PAGE_HEIGHT - MARGIN * 2;
-        
-        let y = MARGIN;
+        const CONTENT_WIDTH = PAGE_WIDTH - (MARGIN * 2);
+        const CONTENT_HEIGHT = PAGE_HEIGHT - (MARGIN * 2);
+
+        // Calculate aspect ratio of the canvas
+        const canvasAspectRatio = canvas.height / canvas.width;
+        // Calculate the total height the image will occupy in the PDF
+        const totalPdfHeight = CONTENT_WIDTH * canvasAspectRatio;
+
+        let yPosition = 0;
         let pageNumber = 1;
-        const PADDING_BETWEEN_ELEMENTS = 4;
 
         const addPageFooter = (pageNum: number) => {
             if (!pdfOptions.includePageNumbers && !pdfOptions.customFooterText) return;
@@ -327,7 +345,7 @@ const App: React.FC = () => {
             pdf.setFontSize(9);
             pdf.setTextColor(128, 128, 128); // Gray color
         
-            const footerY = PAGE_HEIGHT - 10; // Position 10mm from bottom
+            const footerY = PAGE_HEIGHT - 10;
             const footerTextParts: string[] = [];
         
             if (pdfOptions.customFooterText) {
@@ -343,69 +361,20 @@ const App: React.FC = () => {
             pdf.setFontSize(originalFontSize);
             pdf.setTextColor(originalTextColor);
         };
-
-        const elements = Array.from(reportElement.children) as HTMLElement[];
-
-        for (const element of elements) {
-            if (element.tagName === 'FOOTER' && y > MARGIN) {
-                addPageFooter(pageNumber);
+        
+        // Loop through the canvas, slicing it into pages
+        while (yPosition < totalPdfHeight) {
+            if (pageNumber > 1) {
                 pdf.addPage();
-                pageNumber++;
-                y = MARGIN;
             }
+            // Add the same image but use a negative y-position to show the correct slice
+            pdf.addImage(imgData, 'PNG', MARGIN, -yPosition + MARGIN, CONTENT_WIDTH, totalPdfHeight);
+            addPageFooter(pageNumber);
 
-            const canvas = await html2canvas(element, { scale: 2, useCORS: true });
-            const imgProps = pdf.getImageProperties(canvas);
-            const elementHeight = (imgProps.height * CONTENT_WIDTH) / imgProps.width;
-            
-            if (y + elementHeight > PAGE_HEIGHT - MARGIN && y > MARGIN) {
-                addPageFooter(pageNumber);
-                pdf.addPage();
-                pageNumber++;
-                y = MARGIN;
-            }
-            
-            if (elementHeight > CONTENT_HEIGHT) {
-                let heightLeft = elementHeight;
-                let imagePositionInElement = 0;
-
-                while (heightLeft > 0) {
-                    const spaceOnPage = PAGE_HEIGHT - y - MARGIN;
-                    const chunkHeight = Math.min(heightLeft, spaceOnPage);
-                    
-                    const tempCanvas = document.createElement('canvas');
-                    const pixelRatio = canvas.width / CONTENT_WIDTH;
-                    const sourceY = imagePositionInElement * pixelRatio;
-                    const sourceHeight = chunkHeight * pixelRatio;
-                    tempCanvas.width = canvas.width;
-                    tempCanvas.height = sourceHeight;
-                    const ctx = tempCanvas.getContext('2d');
-                    if (ctx) {
-                        ctx.drawImage(canvas, 0, sourceY, canvas.width, sourceHeight, 0, 0, canvas.width, sourceHeight);
-                        pdf.addImage(tempCanvas, 'PNG', MARGIN, y, CONTENT_WIDTH, chunkHeight);
-                    }
-
-                    heightLeft -= chunkHeight;
-                    imagePositionInElement += chunkHeight;
-                    y += chunkHeight;
-                    
-                    if (heightLeft > 0) {
-                        addPageFooter(pageNumber);
-                        pdf.addPage();
-                        pageNumber++;
-                        y = MARGIN;
-                    }
-                }
-            } else {
-                pdf.addImage(canvas, 'PNG', MARGIN, y, CONTENT_WIDTH, elementHeight);
-                y += elementHeight;
-            }
-
-            y += PADDING_BETWEEN_ELEMENTS;
+            yPosition += CONTENT_HEIGHT;
+            pageNumber++;
         }
         
-        addPageFooter(pageNumber);
-
         pdf.save('BaoCaoKhaoSat.pdf');
     } catch (error) {
         console.error("Error generating PDF:", error);
