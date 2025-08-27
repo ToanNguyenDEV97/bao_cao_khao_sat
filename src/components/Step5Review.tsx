@@ -1,5 +1,4 @@
 
-
 import React from 'react';
 import { Printer, Download, FileText } from 'lucide-react';
 import { GeneralInfo, ComputerConfiguration, Recommendation, RecommendationCategory, School } from '../types';

@@ -1,5 +1,4 @@
 
-
 import React from 'react';
 import { Trash2, Sparkles } from 'lucide-react';
 import { Recommendation, RecommendationCategory } from '../types';
@@ -36,7 +35,7 @@ const Step4Recommendations: React.FC<Step4RecommendationsProps> = ({
             <button
                 onClick={onGenerateAiRecommendations}
                 disabled={isGeneratingAiRecs}
-                className="font-sans bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-lg inline-flex items-center transition duration-300 disabled:bg-purple-400 disabled:cursor-wait"
+                className="font-sans bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-lg inline-flex items-center transition duration-300 disabled:bg-purple-400 disabled:cursor-wait print:hidden"
             >
                 {isGeneratingAiRecs ? (
                     <>
