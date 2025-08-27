@@ -1,0 +1,5 @@
+{
+  "name": "Computer Lab Survey Report Generator",
+  "description": "An application to generate computer lab survey reports based on user input, including computer specifications, status, and images, similar to a provided document template.",
+  "requestFramePermissions": []
+}
