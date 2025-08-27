@@ -6,6 +6,7 @@ import { SCHOOL_DATA } from './data/schools';
 import { Download, Upload, RotateCw } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
+import { GoogleGenAI, Type } from "@google/genai";
 
 
 import Stepper from './components/Stepper';
@@ -89,6 +90,7 @@ const App: React.FC = () => {
   const [newRecCategory, setNewRecCategory] = useState<RecommendationCategory>(RecommendationCategory.MAINTENANCE);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [isGeneratingWord, setIsGeneratingWord] = useState(false);
+  const [isGeneratingAiRecs, setIsGeneratingAiRecs] = useState(false);
   const [schools, setSchools] = useState<School[]>(SCHOOL_DATA);
   const importInputRef = useRef<HTMLInputElement>(null);
 
@@ -224,6 +226,71 @@ const App: React.FC = () => {
       setConfigurations(configurations.map(config => 
           config.id === configId ? { ...config, notes: config.notes.filter((_, index) => index !== noteIndex) } : config
       ));
+  };
+
+  const handleGenerateAiRecommendations = async () => {
+    setIsGeneratingAiRecs(true);
+    try {
+        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        
+        const prompt = `You are an expert IT technician specializing in school computer labs. Analyze the following computer lab data and provide practical, actionable recommendations in Vietnamese.
+        Data:
+        - School: ${generalInfo.schoolName}
+        - Total computers: ${computerStats.total}
+        - Working computers: ${computerStats.working}
+        - Faulty computers: ${computerStats.faulty}
+        - Detailed list of all computers (JSON format):
+        ${JSON.stringify(configurations, null, 2)}
+        
+        Your response must be a JSON array of objects, where each object has a 'category' and a 'text'. The category must be one of the following: 'MAINTENANCE', 'REPLACEMENT', 'UPGRADE', 'NEW_PURCHASE'. The 'text' should be a clear recommendation in Vietnamese.`;
+
+        const responseSchema = {
+            type: Type.ARRAY,
+            items: {
+                type: Type.OBJECT,
+                properties: {
+                    category: {
+                        type: Type.STRING,
+                        enum: Object.values(RecommendationCategory),
+                        description: 'The category of the recommendation.'
+                    },
+                    text: {
+                        type: Type.STRING,
+                        description: 'The detailed recommendation text in Vietnamese.'
+                    }
+                },
+                required: ['category', 'text']
+            }
+        };
+
+        const response = await ai.models.generateContent({
+            model: "gemini-2.5-flash",
+            contents: prompt,
+            config: {
+                responseMimeType: "application/json",
+                responseSchema: responseSchema,
+            },
+        });
+        
+        const jsonText = response.text.trim();
+        const aiRecs = JSON.parse(jsonText) as { category: RecommendationCategory; text: string }[];
+
+        if (aiRecs && Array.isArray(aiRecs)) {
+            const newRecommendations = aiRecs.map(rec => ({
+                ...rec,
+                id: Date.now() + Math.random(), // Add unique ID
+            }));
+            setRecommendations(prev => [...prev, ...newRecommendations]);
+        } else {
+            throw new Error("Invalid response format from AI.");
+        }
+
+    } catch (error) {
+        console.error("Error generating AI recommendations:", error);
+        alert("Đã xảy ra lỗi khi tạo đề xuất bằng AI. Vui lòng thử lại.");
+    } finally {
+        setIsGeneratingAiRecs(false);
+    }
   };
   
   const handlePrint = () => window.print();
@@ -561,6 +628,8 @@ const App: React.FC = () => {
                 onNewRecCategoryChange={setNewRecCategory}
                 onAddRecommendation={handleAddRecommendation}
                 onRemoveRecommendation={handleRemoveRecommendation}
+                onGenerateAiRecommendations={handleGenerateAiRecommendations}
+                isGeneratingAiRecs={isGeneratingAiRecs}
                 />;
       case 5:
         return <Step5Review 
@@ -587,14 +656,14 @@ const App: React.FC = () => {
 
   return (
     <div className="bg-gray-100 min-h-screen font-sans text-gray-800 print:bg-white">
-        {(isGeneratingPdf || isGeneratingWord) && (
+        {(isGeneratingPdf || isGeneratingWord || isGeneratingAiRecs) && (
           <div role="status" aria-live="polite" className="fixed inset-0 bg-black bg-opacity-60 z-50 flex flex-col items-center justify-center print:hidden">
             <div className="bg-white p-8 rounded-lg shadow-xl text-center flex flex-col items-center">
               <svg className="animate-spin h-12 w-12 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
               </svg>
-              <h2 className="mt-5 text-xl font-bold text-gray-800">Đang tạo tệp...</h2>
+              <h2 className="mt-5 text-xl font-bold text-gray-800">{isGeneratingAiRecs ? 'AI đang phân tích...' : 'Đang tạo tệp...'}</h2>
               <p className="mt-2 text-sm text-gray-600">Quá trình này có thể mất một vài giây, vui lòng không đóng trang.</p>
             </div>
           </div>

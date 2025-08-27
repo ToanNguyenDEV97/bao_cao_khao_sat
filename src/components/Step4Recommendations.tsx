@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Trash2 } from 'lucide-react';
+import { Trash2, Sparkles } from 'lucide-react';
 import { Recommendation, RecommendationCategory } from '../types';
 import { RECOMMENDATION_CATEGORIES } from '../constants';
 
@@ -13,6 +13,8 @@ interface Step4RecommendationsProps {
     onNewRecCategoryChange: (category: RecommendationCategory) => void;
     onAddRecommendation: () => void;
     onRemoveRecommendation: (id: number) => void;
+    onGenerateAiRecommendations: () => void;
+    isGeneratingAiRecs: boolean;
 }
 
 const Step4Recommendations: React.FC<Step4RecommendationsProps> = ({
@@ -23,10 +25,34 @@ const Step4Recommendations: React.FC<Step4RecommendationsProps> = ({
     onNewRecCategoryChange,
     onAddRecommendation,
     onRemoveRecommendation,
+    onGenerateAiRecommendations,
+    isGeneratingAiRecs,
 }) => {
   return (
     <div className="py-4 font-serif">
-        <h2 className="text-lg font-bold mb-3">IV. ĐỀ XUẤT</h2>
+        <div className="flex justify-between items-center mb-3">
+            <h2 className="text-lg font-bold">IV. ĐỀ XUẤT</h2>
+            <button
+                onClick={onGenerateAiRecommendations}
+                disabled={isGeneratingAiRecs}
+                className="font-sans bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-lg inline-flex items-center transition duration-300 disabled:bg-purple-400 disabled:cursor-wait"
+            >
+                {isGeneratingAiRecs ? (
+                    <>
+                        <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Đang xử lý...
+                    </>
+                ) : (
+                    <>
+                        <Sparkles className="mr-2" size={18}/>
+                        Gợi ý bằng AI
+                    </>
+                )}
+            </button>
+        </div>
         <div className="space-y-4 min-h-[150px]">
             {Object.keys(groupedRecommendations).length > 0 ? 
                 Object.entries(groupedRecommendations).map(([category, recs]) => {
@@ -51,7 +77,7 @@ const Step4Recommendations: React.FC<Step4RecommendationsProps> = ({
                 : (
                     <div className="text-center text-gray-500 py-8">
                         <p>Chưa có đề xuất nào.</p>
-                        <p className="text-sm">Sử dụng biểu mẫu bên dưới để thêm đề xuất mới.</p>
+                        <p className="text-sm">Sử dụng biểu mẫu bên dưới hoặc AI để thêm đề xuất mới.</p>
                     </div>
                 )
             }
