@@ -5,14 +5,14 @@
   "type": "module",
   "homepage": "https://ToanNguyenDEV97.github.io/bao_cao_khao_sat",
   "scripts": {
-    "dev": "npx vite",
-    "build": "npx vite build",
-    "preview": "npx vite preview",
+    "dev": "./node_modules/.bin/vite",
+    "build": "./node_modules/.bin/vite build",
+    "preview": "./node_modules/.bin/vite preview",
     "predeploy": "npm run build",
     "deploy": "gh-pages -d dist -r https://github.com/ToanNguyenDEV97/bao_cao_khao_sat.git"
   },
   "dependencies": {
-    "@google/genai": "^0.20.0",
+    "@google/genai": "^0.15.0",
     "html2canvas": "^1.4.1",
     "jspdf": "^2.5.1",
     "lucide-react": "^0.542.0",
