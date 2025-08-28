@@ -1,4 +1,5 @@
 
+
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Recommendation, RecommendationCategory, ComputerConfiguration, GeneralInfo, School } from './types';
 import { INITIAL_RECOMMENDATIONS, INITIAL_CONFIGURATIONS } from './constants';
@@ -6,7 +7,7 @@ import { SCHOOL_DATA } from './data/schools';
 import { Download, Upload, RotateCw } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
-import { GoogleGenAI, Type } from "@google/genai";
+
 
 import Stepper from './components/Stepper';
 import StepNavigation from './components/StepNavigation';
@@ -89,7 +90,6 @@ const App: React.FC = () => {
   const [newRecCategory, setNewRecCategory] = useState<RecommendationCategory>(RecommendationCategory.MAINTENANCE);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [isGeneratingWord, setIsGeneratingWord] = useState(false);
-  const [isGeneratingAiRecs, setIsGeneratingAiRecs] = useState(false);
   const [schools, setSchools] = useState<School[]>(SCHOOL_DATA);
   const importInputRef = useRef<HTMLInputElement>(null);
 
@@ -347,76 +347,6 @@ const App: React.FC = () => {
         setIsGeneratingPdf(false);
     }
   };
-  
-  const handleGenerateAiRecommendations = async () => {
-    setIsGeneratingAiRecs(true);
-    try {
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-
-        const context = `
-        Báo cáo khảo sát phòng máy cho trường ${generalInfo.schoolName}.
-        Địa chỉ: ${generalInfo.schoolAddress}.
-        Tổng số máy: ${computerStats.total}.
-        Số máy hoạt động tốt: ${computerStats.working}.
-        Số máy bị lỗi: ${computerStats.faulty}.
-        Chi tiết lỗi: ${computerStats.noteLabels || 'Không có'}.
-        Cấu hình chi tiết của các máy (dạng JSON): ${JSON.stringify(configurations, null, 2)}
-        `;
-
-        const prompt = `
-        Dựa vào thông tin khảo sát phòng máy trên, hãy đưa ra các đề xuất cụ thể, chuyên nghiệp và hữu ích bằng tiếng Việt để cải thiện tình trạng phòng máy.
-        Phân loại các đề xuất vào các danh mục sau: 'MAINTENANCE' (Bảo trì, sửa chữa), 'REPLACEMENT' (Thay thế), 'UPGRADE' (Nâng cấp), 'NEW_PURCHASE' (Đầu tư mới).
-        Cung cấp ít nhất 3-5 đề xuất. Mỗi đề xuất phải rõ ràng và có thể hành động được. Ví dụ: "Nâng cấp RAM lên 8GB cho 5 máy có cấu hình CPU G3240 để chạy mượt các phần mềm đồ họa."
-        `;
-        
-        const response = await ai.models.generateContent({
-            model: "gemini-2.5-flash",
-            contents: `${context}\n\n${prompt}`,
-            config: {
-                responseMimeType: "application/json",
-                responseSchema: {
-                    type: Type.OBJECT,
-                    properties: {
-                        recommendations: {
-                            type: Type.ARRAY,
-                            items: {
-                                type: Type.OBJECT,
-                                properties: {
-                                    category: {
-                                        type: Type.STRING,
-                                        enum: ['MAINTENANCE', 'REPLACEMENT', 'UPGRADE', 'NEW_PURCHASE'],
-                                        description: 'Phân loại đề xuất.'
-                                    },
-                                    text: {
-                                        type: Type.STRING,
-                                        description: 'Nội dung chi tiết của đề xuất.'
-                                    }
-                                },
-                                required: ['category', 'text']
-                            }
-                        }
-                    },
-                    required: ['recommendations']
-                },
-            },
-        });
-
-        const jsonStr = response.text.trim();
-        const jsonResponse = JSON.parse(jsonStr);
-        const newRecommendations = jsonResponse.recommendations.map((rec: Omit<Recommendation, 'id'>) => ({
-            ...rec,
-            id: Date.now() + Math.random(),
-        }));
-        
-        setRecommendations(prev => [...prev, ...newRecommendations]);
-
-    } catch (error) {
-        console.error("Error generating AI recommendations:", error);
-        alert("Đã xảy ra lỗi khi tạo gợi ý bằng AI. Vui lòng thử lại.");
-    } finally {
-        setIsGeneratingAiRecs(false);
-    }
-};
 
   const handleDownloadWord = async () => {
     setIsGeneratingWord(true);
@@ -506,6 +436,7 @@ const App: React.FC = () => {
         }
         
         // 4. Transform Footer (Flex -> Table)
+        // Fix: Corrected variable declaration. 'footerEl' was used in its own declaration.
         const footerEl = clonedReport.querySelector('footer');
         if(footerEl) {
             const signatureDivs = footerEl.querySelectorAll('div > div');
@@ -587,6 +518,7 @@ const App: React.FC = () => {
             console.error("Error parsing imported file:", error);
             alert("Đã xảy ra lỗi khi đọc hoặc phân tích cú pháp tệp.");
         } finally {
+            // Reset file input to allow importing the same file again
             if (importInputRef.current) {
                 importInputRef.current.value = "";
             }
@@ -630,8 +562,6 @@ const App: React.FC = () => {
                 onNewRecCategoryChange={setNewRecCategory}
                 onAddRecommendation={handleAddRecommendation}
                 onRemoveRecommendation={handleRemoveRecommendation}
-                onGenerateAiRecommendations={handleGenerateAiRecommendations}
-                isGeneratingAiRecs={isGeneratingAiRecs}
                 />;
       case 5:
         return <Step5Review 
