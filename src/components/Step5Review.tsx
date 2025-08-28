@@ -1,4 +1,5 @@
 
+
 import React from 'react';
 import { Printer, Download, FileText } from 'lucide-react';
 import { GeneralInfo, ComputerConfiguration, Recommendation, RecommendationCategory, School } from '../types';
@@ -210,12 +211,12 @@ const Step5Review: React.FC<Step5ReviewProps> = ({
                         </div>
                     </header>
                     
-                    <section className="my-8 break-inside-avoid">
+                    <section id="review-section-info" className="my-8 break-inside-avoid">
                         <h2 className="text-lg font-bold mb-3">I. Thông tin chung:</h2>
                         <ReadOnlyGeneralInfo />
                     </section>
 
-                    <section className="my-8 break-inside-avoid">
+                    <section id="review-section-config" className="my-8 break-inside-avoid">
                         <h2 className="text-lg font-bold mb-3">II. TÌNH TRẠNG PHÒNG MÁY</h2>
                         <div className="bg-gray-50 p-4 rounded-lg border leading-relaxed">
                             <p><strong>- Tổng số máy:</strong> {computerStats.total} máy</p>
@@ -231,12 +232,12 @@ const Step5Review: React.FC<Step5ReviewProps> = ({
                         />
                     </section>
 
-                    <section className="my-8 break-inside-avoid">
+                    <section id="review-section-images" className="my-8 break-inside-avoid">
                         <h2 className="text-lg font-bold mb-3">III. HÌNH ẢNH</h2>
                         <ImageGallery images={images} onImageUpload={() => {}} isReadOnly={true} />
                     </section>
 
-                    <section className="my-8 break-inside-avoid">
+                    <section id="review-section-recs" className="my-8 break-inside-avoid">
                         <h2 className="text-lg font-bold mb-3">IV. ĐỀ XUẤT</h2>
                          <div className="space-y-4">
                             {Object.entries(groupedRecommendations).map(([category, recs]) => {
@@ -254,7 +255,7 @@ const Step5Review: React.FC<Step5ReviewProps> = ({
                         </div>
                     </section>
                     
-                    <footer className="mt-12 pt-8 break-before-page">
+                    <footer id="review-footer" className="mt-12 pt-8 break-before-page">
                         <div className="flex justify-around text-center">
                             <div>
                                 <p className="font-bold">Người khảo sát</p>

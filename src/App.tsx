@@ -233,19 +233,17 @@ const App: React.FC = () => {
     setIsGeneratingPdf(true);
     const reportElement = document.getElementById('report-content');
     if (!reportElement) {
-        alert("PDF generation library not loaded.");
+        alert("Không thể tạo PDF, không tìm thấy nội dung báo cáo.");
         setIsGeneratingPdf(false);
         return;
     }
 
     try {
         const pdf = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
-
         const MARGIN = 15;
         const PAGE_WIDTH = pdf.internal.pageSize.getWidth();
         const PAGE_HEIGHT = pdf.internal.pageSize.getHeight();
         const CONTENT_WIDTH = PAGE_WIDTH - MARGIN * 2;
-        const CONTENT_HEIGHT = PAGE_HEIGHT - MARGIN * 2;
         
         let y = MARGIN;
         let pageNumber = 1;
@@ -253,96 +251,119 @@ const App: React.FC = () => {
 
         const addPageFooter = (pageNum: number) => {
             if (!pdfOptions.includePageNumbers && !pdfOptions.customFooterText) return;
-        
             const originalFontSize = pdf.getFontSize();
             const originalTextColor = pdf.getTextColor();
-        
             pdf.setFontSize(9);
-            pdf.setTextColor(128, 128, 128); // Gray color
-        
-            const footerY = PAGE_HEIGHT - 10; // Position 10mm from bottom
+            pdf.setTextColor(128, 128, 128);
+            const footerY = PAGE_HEIGHT - 10;
             const footerTextParts: string[] = [];
-        
-            if (pdfOptions.customFooterText) {
-                footerTextParts.push(pdfOptions.customFooterText);
-            }
-            if (pdfOptions.includePageNumbers) {
-                footerTextParts.push(`Trang ${pageNum}`);
-            }
-        
+            if (pdfOptions.customFooterText) footerTextParts.push(pdfOptions.customFooterText);
+            if (pdfOptions.includePageNumbers) footerTextParts.push(`Trang ${pageNum}`);
             const footerText = footerTextParts.join('  |  ');
             pdf.text(footerText, PAGE_WIDTH / 2, footerY, { align: 'center' });
-        
             pdf.setFontSize(originalFontSize);
             pdf.setTextColor(originalTextColor);
         };
+        
+        const addPage = () => {
+            addPageFooter(pageNumber);
+            pdf.addPage();
+            pageNumber++;
+            return MARGIN;
+        };
 
-        const elements = Array.from(reportElement.children) as HTMLElement[];
-
-        for (const element of elements) {
-            if (element.tagName === 'FOOTER' && y > MARGIN) {
-                addPageFooter(pageNumber);
-                pdf.addPage();
-                pageNumber++;
-                y = MARGIN;
-            }
-
+        const addElement = async (element: HTMLElement | null, currentY: number): Promise<number> => {
+            if (!element) return currentY;
             const canvas = await html2canvas(element, { scale: 2, useCORS: true });
             const imgProps = pdf.getImageProperties(canvas);
             const elementHeight = (imgProps.height * CONTENT_WIDTH) / imgProps.width;
-            
-            if (y + elementHeight > PAGE_HEIGHT - MARGIN && y > MARGIN) {
-                addPageFooter(pageNumber);
-                pdf.addPage();
-                pageNumber++;
-                y = MARGIN;
+
+            if (currentY + elementHeight > PAGE_HEIGHT - MARGIN && currentY > MARGIN) {
+                currentY = addPage();
             }
             
-            if (elementHeight > CONTENT_HEIGHT) {
-                let heightLeft = elementHeight;
-                let imagePositionInElement = 0;
+            pdf.addImage(canvas, 'PNG', MARGIN, currentY, CONTENT_WIDTH, elementHeight);
+            return currentY + elementHeight + PADDING_BETWEEN_ELEMENTS;
+        };
 
-                while (heightLeft > 0) {
-                    const spaceOnPage = PAGE_HEIGHT - y - MARGIN;
-                    const chunkHeight = Math.min(heightLeft, spaceOnPage);
-                    
-                    const tempCanvas = document.createElement('canvas');
-                    const pixelRatio = canvas.width / CONTENT_WIDTH;
-                    const sourceY = imagePositionInElement * pixelRatio;
-                    const sourceHeight = chunkHeight * pixelRatio;
-                    tempCanvas.width = canvas.width;
-                    tempCanvas.height = sourceHeight;
-                    const ctx = tempCanvas.getContext('2d');
-                    if (ctx) {
-                        ctx.drawImage(canvas, 0, sourceY, canvas.width, sourceHeight, 0, 0, canvas.width, sourceHeight);
-                        pdf.addImage(tempCanvas, 'PNG', MARGIN, y, CONTENT_WIDTH, chunkHeight);
-                    }
+        // Process elements sequentially
+        y = await addElement(reportElement.querySelector('header'), y);
+        y = await addElement(document.getElementById('review-section-info'), y);
 
-                    heightLeft -= chunkHeight;
-                    imagePositionInElement += chunkHeight;
-                    y += chunkHeight;
-                    
-                    if (heightLeft > 0) {
-                        addPageFooter(pageNumber);
-                        pdf.addPage();
-                        pageNumber++;
-                        y = MARGIN;
-                    }
+        // --- Handle Config Section with Table ---
+        const configSection = document.getElementById('review-section-config');
+        if (configSection) {
+            y = await addElement(configSection.querySelector('h2'), y);
+            y = await addElement(configSection.querySelector('.bg-gray-50'), y);
+            y = await addElement(configSection.querySelector('p.font-semibold'), y);
+
+            const tableEl = configSection.querySelector('table');
+            if (tableEl) {
+                const thead = tableEl.querySelector('thead');
+                const tbodyRows = Array.from(tableEl.querySelectorAll('tbody tr')) as HTMLElement[];
+                
+                let headerCanvas: HTMLCanvasElement | null = null;
+                let headerHeight = 0;
+
+                if (thead) {
+                    headerCanvas = await html2canvas(thead, { scale: 2 });
+                    const headerProps = pdf.getImageProperties(headerCanvas);
+                    headerHeight = (headerProps.height * CONTENT_WIDTH) / headerProps.width;
                 }
-            } else {
-                pdf.addImage(canvas, 'PNG', MARGIN, y, CONTENT_WIDTH, elementHeight);
-                y += elementHeight;
-            }
 
-            y += PADDING_BETWEEN_ELEMENTS;
+                const addTableHeader = (currentY: number) => {
+                    if (!headerCanvas) return currentY;
+                    if (currentY + headerHeight > PAGE_HEIGHT - MARGIN && currentY > MARGIN) {
+                        currentY = addPage();
+                    }
+                    pdf.addImage(headerCanvas, 'PNG', MARGIN, currentY, CONTENT_WIDTH, headerHeight);
+                    return currentY + headerHeight;
+                };
+
+                y = addTableHeader(y);
+
+                for (const row of tbodyRows) {
+                    const canvas = await html2canvas(row, { scale: 2 });
+                    const imgProps = pdf.getImageProperties(canvas);
+                    const rowHeight = (imgProps.height * CONTENT_WIDTH) / imgProps.width;
+                    
+                    if (y + rowHeight > PAGE_HEIGHT - MARGIN) {
+                        y = addPage();
+                        y = addTableHeader(y);
+                    }
+                    pdf.addImage(canvas, 'PNG', MARGIN, y, CONTENT_WIDTH, rowHeight);
+                    y += rowHeight;
+                }
+                 y += PADDING_BETWEEN_ELEMENTS;
+            }
         }
         
-        addPageFooter(pageNumber);
+        y = await addElement(document.getElementById('review-section-images'), y);
+        
+        // --- Handle Recommendations Section ---
+        const recsSection = document.getElementById('review-section-recs');
+        if(recsSection) {
+            y = await addElement(recsSection.querySelector('h2'), y);
+            const recGroups = Array.from(recsSection.querySelectorAll('.space-y-4 > div')) as HTMLElement[];
+            for (const group of recGroups) {
+                y = await addElement(group, y);
+            }
+        }
 
+        // --- Handle Footer ---
+        const footerEl = document.getElementById('review-footer');
+        if (footerEl) {
+            if (y > MARGIN + 1) { 
+                 y = addPage();
+            }
+            y = await addElement(footerEl, y);
+        }
+
+        addPageFooter(pageNumber);
         pdf.save('BaoCaoKhaoSat.pdf');
     } catch (error) {
-        console.error("Error generating PDF:", error);
-        alert("An error occurred while generating the PDF.");
+        console.error("Lỗi khi tạo PDF:", error);
+        alert("Đã có lỗi xảy ra trong quá trình tạo tệp PDF.");
     } finally {
         setIsGeneratingPdf(false);
     }
